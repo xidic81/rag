@@ -19,10 +19,7 @@ with open('cat-facts.txt', 'r') as file:
     dataset = [line.strip() for line in file if line.strip()]
 print(f'Loaded {len(dataset)} entries')
 
-# --- 4. Embedding model ---
-# Make sure you have emb_model defined
-# e.g., from sentence_transformers import SentenceTransformer
-# emb_model = SentenceTransformer("all-MiniLM-L6-v2")
+
 
 vector_size = len(emb_model.encode("test"))  # get embedding dimension
 
