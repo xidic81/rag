@@ -13,17 +13,16 @@ client = QdrantClient(
     api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Ef4XkbdC-ewbGLrB8l_yIZPS6Iwz_wJilGysBZkQEoM"                  # or your API key if using Qdrant Cloud
 )
 print(client.get_collections())
-# --- 3. Load dataset ---
+
+# --- Load dataset ---
 dataset = []
 with open('cat-facts.txt', 'r') as file:
     dataset = [line.strip() for line in file if line.strip()]
 print(f'Loaded {len(dataset)} entries')
 
-
-
 vector_size = len(emb_model.encode("test"))  # get embedding dimension
 
-# --- 5. Create Qdrant collection ---
+# --- Create Qdrant collection ---
 collection_name = "cat_facts"
 client.recreate_collection(
     collection_name=collection_name,
@@ -33,7 +32,7 @@ client.recreate_collection(
     )
 )
 
-# --- 6. Insert text chunks into Qdrant ---
+# --- Insert text chunks into Qdrant ---
 points = []
 for idx, chunk in enumerate(tqdm(dataset, desc="Embedding & uploading")):
     embedding = emb_model.encode(chunk)
@@ -81,7 +80,7 @@ print("\n🔍 Top results:")
 for hit in results:
     print(f"Score: {hit.score:.3f} | Text: {hit.payload['text']}")
 
-# --- 7. Optional: Query example ---
+# --- Optional: Query example ---
 def retrieve(query, top_n=3):
   query = "Why do cats purr?"
   query_vector = emb_model.encode(query)
@@ -99,8 +98,6 @@ def retrieve(query, top_n=3):
 
 input_query = input('Ask me a question: ')
 retrieved_knowledge = retrieve(input_query)
-
-
 
 for hit in retrieved_knowledge:
     print(f"Score: {hit.score:.3f} | Text: {hit.payload['text']}")
@@ -123,3 +120,4 @@ result = tokenizer.decode(outputs[0][input_tensor.shape[1]:], skip_special_token
 print("THE OUTPUT FROM THE CHATBOT : ")
 
 print(result)
+
