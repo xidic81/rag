@@ -97,7 +97,7 @@ def retrieve(query, top_n=3):
     print(f"Score: {hit.score:.3f} | Text: {hit.payload['text']}")
   return results
 
-  input_query = input('Ask me a question: ')
+input_query = input('Ask me a question: ')
 retrieved_knowledge = retrieve(input_query)
 
 
@@ -121,4 +121,5 @@ outputs = model.generate(input_tensor.to(model.device), max_new_tokens=100)
 
 result = tokenizer.decode(outputs[0][input_tensor.shape[1]:], skip_special_tokens=True)
 print("THE OUTPUT FROM THE CHATBOT : ")
+
 print(result)
