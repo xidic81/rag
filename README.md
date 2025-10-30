@@ -1,4 +1,4 @@
-# rag
+# RAG
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/xidic81/rag/blob/main/rag.ipynb)
 
@@ -61,3 +61,164 @@ The Taj Mahal in India is made entirely out of marble.	[-0.12, 0.03, 0.9, -0.1, 
 When a user asks a question, the system turns the question into a vector, and then asks the database: "Which stored vectors are closest to this question vector?" Closeness in math means similarity in meaning.
 
 To find out how "close" two vectors are, we use a technique called Cosine Similarity. Don't worry about the formula—just know that the higher the similarity score, the more relevant the stored information is to the user's question!
+
+🔎 Step 2: The Retrieval Phase (Finding the Answer)
+
+This is the moment the RAG system actually answers a question.
+
+    Question to Vector: You type a question (your Input Query). Just like with the knowledge chunks, the Embedding Model instantly turns your question into a Query Vector (a list of numbers representing the question's meaning).
+
+    Smart Search: The system takes this Query Vector and checks it against all the vectors stored in the Vector Database (Qdrant). It finds the chunks whose vectors are the closest match to your question vector.
+
+    Top Facts Found: The database hands back the Top N (usually 3 or 5) most relevant facts, along with their high similarity scores. These few facts are the crucial Retrieved Knowledge that the final chatbot will use.
+
+    💻 Let's Code It! (Using Python and Qdrant)
+
+We'll write a simple Python script using Qdrant and a placeholder for the text-to-vector conversion.
+
+1. Setup and Preparation
+
+Just install the Qdrant client:
+Bash
+
+Install the Qdrant client for the Vector Database
+pip install qdrant-client
+
+2. Loading the Dataset
+
+We'll use a placeholder function, emb_model, to simulate the job of the Embedding Model. For a real RAG system, you would replace this with calls to an API (like OpenAI, Cohere) or a local library (like Hugging Face Transformers).
+
+```python
+from FlagEmbedding import FlagModel
+from qdrant_client import QdrantClient, models
+from tqdm import tqdm
+
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
+
+
+emb_model = FlagModel('BAAI/bge-large-en', use_fp16=True)
+
+client = QdrantClient(
+    url="https://35628111-12ca-49e6-b072-...",  # use your Qdrant Cloud URL
+    api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp...",  # your API key if using Qdrant Cloud
+)
+print(client.get_collections())
+--- Load dataset ---
+dataset = []
+with open('cat-facts.txt', 'r') as file:
+    dataset = [line.strip() for line in file if line.strip()]
+print(f'Loaded {len(dataset)} entries')
+
+vector_size = len(emb_model.encode("test"))  # get embedding dimension
+```
+3. Implement the Vector Database (with Qdrant)
+
+This section initializes Qdrant and implements the Indexing Phase by using the mock embedding function to load the data.
+```Python
+# --- Create Qdrant collection ---
+collection_name = "cat_facts"
+client.recreate_collection(
+    collection_name=collection_name,
+    vectors_config=models.VectorParams(
+        size=vector_size,
+        distance=models.Distance.COSINE
+    )
+)
+
+# --- Insert text chunks into Qdrant ---
+points = []
+for idx, chunk in enumerate(tqdm(dataset, desc="Embedding & uploading")):
+    embedding = emb_model.encode(chunk)
+    points.append(
+        models.PointStruct(
+            id=idx,  # unique ID for each vector
+            vector=embedding,
+            payload={"text": chunk}
+        )
+    )
+
+# Upload all vectors in one batch
+client.upsert(
+    collection_name=collection_name,
+    points=points
+)
+
+print(f"✅ Successfully added {len(points)} chunks to Qdrant!")
+
+model_name = "deepseek-ai/deepseek-llm-7b-chat"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, device_map="cuda:0")
+model.generation_config = GenerationConfig.from_pretrained(model_name)
+model.generation_config.pad_token_id = model.generation_config.eos_token_id
+
+messages = [
+    {"role": "user", "content": "Who are you?"}
+]
+input_tensor = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
+outputs = model.generate(input_tensor.to(model.device), max_new_tokens=100)
+
+result = tokenizer.decode(outputs[0][input_tensor.shape[1]:], skip_special_tokens=True)
+print(result)
+
+query = "Why do cats purr?"
+query_vector = emb_model.encode(query)
+
+results = client.search(
+    collection_name=collection_name,
+    query_vector=query_vector,
+    limit=3
+)
+
+print("\n🔍 Top results:")
+for hit in results:
+    print(f"Score: {hit.score:.3f} | Text: {hit.payload['text']}")
+```
+🏃 Step 4: Implement the Retrieval Function
+
+This function handles the Retrieval Phase by taking a user query, turning it into a vector (again, using the mock function), and searching Qdrant.
+```python
+# --- Optional: Query example ---
+def retrieve(query, top_n=3):
+  query = "Why do cats purr?"
+  query_vector = emb_model.encode(query)
+
+  results = client.search(
+    collection_name=collection_name,
+    query_vector=query_vector,
+    limit=3
+  )
+
+  print("\n🔍 Top results:")
+  for hit in results:
+    print(f"Score: {hit.score:.3f} | Text: {hit.payload['text']}")
+  return results
+```
+💬 Step 5: Generation Phase (The Final Answer)
+
+In a real RAG application, you would now use the retrieved facts to build a prompt for your Language Model (LLM), which would then generate the final, informed answer.
+```python
+input_query = input('Ask me a question: ')
+retrieved_knowledge = retrieve(input_query)
+
+for hit in retrieved_knowledge:
+    print(f"Score: {hit.score:.3f} | Text: {hit.payload['text']}")
+
+text = f"""
+{" ".join([f'{hit.payload['text']}. ' for hit in retrieved_knowledge])}
+.Think the above information are the only knowledge you have, don't add any additional information, if the information above not sufficient answer 'I am sorry I don't know', now respond to this : {input_query}. Do not add something like 'Based on the information provided'
+"""
+messages = [
+    {"role":"user","content":"Jakarta is the capital city of Indonesia. Think the above information are the only knowledge you have, don't add any additional information, if the information above not sufficient answer 'I am sorry I don't know', now respond to this : 'What is capital city of Indonesia'. Do not add something like 'Based on the information provided"},
+    {"role": "assistant", "content": "The capital city of Indonesia is Jakarta"},
+    {"role":"user","content":"Dragon is a mythological animal from some countries like China and Japan. Think the above information are the only knowledge you have, don't add any additional information, if the information above not sufficient answer 'I am sorry I don't know', now respond to this : 'What is capital city of Japan?'. Do not add something like 'Based on the information provided"},
+    {"role": "assistant", "content": "I am sorry, I don't know about that"},
+    {"role": "user", "content": text}
+]
+input_tensor = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
+outputs = model.generate(input_tensor.to(model.device), max_new_tokens=100)
+
+result = tokenizer.decode(outputs[0][input_tensor.shape[1]:], skip_special_tokens=True)
+print("THE OUTPUT FROM THE CHATBOT : ")
+print(result)
+```
