@@ -1,6 +1,6 @@
 # RAG
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/xidic81/rag/blob/main/rag.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/xidic81/rag/blob/main/ragqdrant.ipynb)
 
 📚 RAG: Giving AI a Search Engine
 
