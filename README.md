@@ -225,7 +225,7 @@ print(result)
 ![Demonstration of the RAG Qdrant](gif/raggg.gif)
 
 
-## 📚 Article Sources / References
+# 📚 Article Sources / References
 
 This RAG (Retrieval-Augmented Generation) project is inspired by and references the following implementation guide:
 
