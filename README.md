@@ -223,3 +223,11 @@ print("THE OUTPUT FROM THE CHATBOT : ")
 print(result)
 ```
 ![Demonstration of the RAG Qdrant](gif/raggg.gif)
+
+
+## 📚 Article Sources / References
+
+This RAG (Retrieval-Augmented Generation) project is inspired by and references the following implementation guide:
+
+* **[Code a simple RAG from scratch]** by **Ngxson**.
+  Available at: [Hugging Face Blog](https://huggingface.co/blog/ngxson/make-your-own-rag)
