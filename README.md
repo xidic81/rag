@@ -222,3 +222,4 @@ result = tokenizer.decode(outputs[0][input_tensor.shape[1]:], skip_special_token
 print("THE OUTPUT FROM THE CHATBOT : ")
 print(result)
 ```
+![Demonstration of the RAG Qdrant](gif/raggg.gif)
